@@ -1,0 +1,66 @@
+html {
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: white;
+  color: black;
+  font-family: 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.05em;
+  font-size: 16px;
+  line-height: 3.5;
+}
+
+hr {
+  height: 0;
+  border: none;
+  margin: 63px 0;
+}
+
+.app {
+  position: fixed;
+  width: 50%;
+  height: 100%;
+  top: 0;
+  right: 0;
+  left: 50%;
+  bottom: 0;
+  padding: 3em 1em 1em 3em;
+  overflow: auto;
+  border-left: 2px solid black;
+}
+
+a {
+  display: block;
+  color: black;
+  cursor: pointer;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+  a:focus {
+    color: white;
+  }
+
+.reset {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  text-align: right;
+  padding: 0 1em;
+  line-height: 100vh;
+  vertical-align: middle;
+}
