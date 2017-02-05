@@ -25,10 +25,8 @@ const swap = i => {
 window.swap = swap;
 
 const represent = xs => {
-  const str = xs.map(x => [x[0], x[2]].filter(Boolean).join(''));
-
+  const str = xs.map(x => x.split(' ').map(w => w[0]).join(''));
   const n = xs.reduce((memo, x) => memo = memo+ x.length, 0);
-
   return [n].concat(str).join('-');
 };
 
