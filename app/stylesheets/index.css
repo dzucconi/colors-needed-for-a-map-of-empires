@@ -33,8 +33,6 @@ hr {
 
 .app {
   position: fixed;
-  width: 50%;
-  height: 100%;
   top: 0;
   right: 0;
   left: 50%;
@@ -63,4 +61,10 @@ a {
   padding: 0 1em;
   line-height: 100vh;
   vertical-align: middle;
+}
+
+@media (max-width: 800px) {
+  .app {
+    left: 0;
+  }
 }
