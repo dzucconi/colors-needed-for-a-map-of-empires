@@ -25,8 +25,7 @@ const swap = i => {
 window.swap = swap;
 
 const represent = xs => {
-  // need to compact:
-  const str = xs.map(x => x[0] + x[2]);
+  const str = xs.map(x => [x[0], x[2]].filter(Boolean).join(''));
 
   const n = xs.reduce((memo, x) => memo = memo+ x.length, 0);
 
