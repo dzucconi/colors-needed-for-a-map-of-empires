@@ -34,7 +34,7 @@ const represent = xs => {
 
 const update = () =>
   DOM.app.innerHTML = `
-    <a class='permalink' href='/?${STATE.colors.map((color, i) => `colors[${i}]=${color}`).join('&')}'>
+    <a class='permalink' href='?${STATE.colors.map((color, i) => `colors[${i}]=${color}`).join('&')}'>
       ${represent(STATE.colors)}
     </a>
     <hr>
