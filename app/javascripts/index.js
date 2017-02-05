@@ -43,7 +43,7 @@ const update = () =>
       <a class='color' href='#' onclick='swap(${i}); return false;'>${color}</a>
     `).join('')}
     <hr>
-    <a class='reset' href='/'>
+    <a class='reset' href='?'>
       ▶
     </a>
   `;
