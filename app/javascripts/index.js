@@ -8,7 +8,12 @@ const DOM = {
 };
 
 const STATE = {
-  colors: [],
+  colors: [
+    'wait',
+    'wait',
+    'wait',
+    'wait',
+  ],
 };
 
 const fetch = amount =>
@@ -48,6 +53,8 @@ const render = () =>
   `;
 
 export default () => {
+  render();
+
   const { amount, colors } = parameters({ amount: 4 });
 
   if (colors) {
