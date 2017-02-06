@@ -72,13 +72,13 @@ a {
     height: 0;
     top: 50%;
     left: 50%;
-    border: 1em solid black;
-    border-left-width: 1.5em;
+    border: 0.75em solid black;
+    border-left-width: 1em;
     border-top-color: transparent;
     border-right-color: transparent;
     border-bottom-color: transparent;
-    margin-top: -0.5em;
-    margin-left: -0.5em;
+    margin-top: -0.375em;
+    margin-left: -0.375em;
   }
 
 @media (max-width: 1024px) {
@@ -97,15 +97,5 @@ a {
 @media (max-width: 600px) {
   body {
     font-size: 14px;
-  }
-
-  .reset:after {
-    border: 0.75em solid black;
-    border-left-width: 1em;
-    border-top-color: transparent;
-    border-right-color: transparent;
-    border-bottom-color: transparent;
-    margin-top: -0.375em;
-    margin-left: -0.375em;
   }
 }
