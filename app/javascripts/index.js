@@ -18,7 +18,7 @@ const fetch = amount =>
 const swap = i => {
   return fetch(1).then(colors => {
     STATE.colors[i] = colors[0];
-    update();
+    render();
   });
 };
 
@@ -30,19 +30,21 @@ const represent = xs => {
   return [n].concat(str).join('-');
 };
 
-const update = () =>
+const render = () =>
   DOM.app.innerHTML = `
     <a class='permalink' target='_blank' href='?${STATE.colors.map((color, i) => `colors[${i}]=${color}`).join('&')}'>
       ${represent(STATE.colors)}
     </a>
+
     <hr>
+
     ${STATE.colors.map((color, i) => `
       <a class='color' href='#' onclick='swap(${i}); return false;'>${color}</a>
     `).join('')}
+
     <hr>
-    <a class='reset' href='?'>
-      ▶
-    </a>
+
+    <a class='reset' href='?'></a>
   `;
 
 export default () => {
@@ -50,11 +52,11 @@ export default () => {
 
   if (colors) {
     STATE.colors = colors;
-    return update();
+    return render();
   }
 
   fetch(amount).then(colors => {
     STATE.colors = colors;
-    update();
+    render();
   });
 };
