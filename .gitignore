@@ -1,0 +1,4 @@
+.DS_Store
+dist
+legacy
+node_modules

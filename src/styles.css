@@ -1,0 +1,101 @@
+html {
+  box-sizing: border-box;
+}
+
+*,
+*:before,
+*:after {
+  box-sizing: inherit;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+
+body {
+  background-color: white;
+  color: black;
+  font-family: "Helvetica Neue", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.05em;
+  font-size: 18px;
+  line-height: 3.5;
+}
+
+hr {
+  height: 0;
+  border: none;
+  margin: 63px 0;
+}
+
+.app {
+  position: fixed;
+  top: 0;
+  right: 0;
+  left: 50%;
+  bottom: 0;
+  padding: 3em 1em 1em 3em;
+  border-left: 2px solid black;
+  overflow: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+a {
+  display: block;
+  color: black;
+  cursor: pointer;
+  text-transform: uppercase;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+a:focus {
+  color: white;
+}
+
+.reset {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 0;
+  width: 4em;
+  text-align: right;
+}
+.reset:after {
+  position: absolute;
+  display: block;
+  content: "";
+  width: 0;
+  height: 0;
+  top: 50%;
+  left: 50%;
+  border: 0.75em solid black;
+  border-left-width: 1em;
+  border-top-color: transparent;
+  border-right-color: transparent;
+  border-bottom-color: transparent;
+  margin-top: -0.375em;
+  margin-left: -0.375em;
+}
+
+@media (max-width: 1024px) {
+  body {
+    font-size: 16px;
+  }
+}
+
+@media (max-width: 800px) {
+  .app {
+    left: 0;
+    border-left: none;
+  }
+}
+
+@media (max-width: 600px) {
+  body {
+    font-size: 14px;
+  }
+}
