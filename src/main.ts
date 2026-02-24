@@ -1,7 +1,11 @@
 import "./styles.css";
 import rawColors from "../colors.txt?raw";
 import { createTextFader } from "./lib/animation";
-import { initIdleTracker, initKeyboardNav, isPlainLeftClick } from "./lib/interaction";
+import {
+  initKeyboardNav,
+  initNavSurface,
+  isPlainLeftClick,
+} from "./lib/interaction";
 import { createPaletteToolkit } from "./lib/palette";
 
 type HistoryMode = "push" | "replace" | "none";
@@ -178,13 +182,14 @@ prevNav.addEventListener("click", (event) => {
 });
 
 const init = (): void => {
-  initIdleTracker({
+  initNavSurface({
     nextNav,
     prevNav,
     idleTimeoutMs: IDLE_TIMEOUT_MS,
+    canGoBack: () => historyDepth() > 0,
+    goBack: () => window.history.back(),
+    goNext: () => setPalette(state.nextTarget, "push"),
   });
-  document.body.dataset["overLink"] = "false";
-
   initKeyboardNav({
     canGoBack: () => historyDepth() > 0,
     goBack: () => window.history.back(),

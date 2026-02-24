@@ -78,7 +78,7 @@ body.is-idle {
 .page-nav:after {
   position: fixed;
   top: var(--cursor-y, 50%);
-  transform: translateY(-55%);
+  transform: translateY(-55%) translateX(0);
   font-size: 2.25rem;
   line-height: 1;
   font-family:
@@ -94,7 +94,9 @@ body.is-idle {
   color: black;
   opacity: 0;
   pointer-events: none;
-  transition: opacity 300ms ease;
+  transition:
+    opacity 220ms ease,
+    transform 120ms ease-out;
 }
 
 .page-nav-next {
@@ -129,6 +131,36 @@ body[data-side="left"]:not(.is-idle)[data-over-link="false"] .page-nav-prev {
 body[data-side="left"]:not(.is-idle)[data-over-link="false"]
   .page-nav-prev:after {
   opacity: 0.75;
+}
+
+body.is-touching[data-touch-side="right"] .page-nav-next:after {
+  top: var(--touch-y, var(--cursor-y, 50%));
+  transform: translateY(-55%) translateX(calc((1 - var(--touch-pull, 0)) * 18px));
+  opacity: 0.85;
+}
+
+body.is-touching[data-touch-side="left"] .page-nav-prev:after {
+  top: var(--touch-y, var(--cursor-y, 50%));
+  transform: translateY(-55%) translateX(calc((var(--touch-pull, 0) - 1) * 18px));
+  opacity: 0.85;
+}
+
+body.is-touch-releasing[data-touch-side="right"] .page-nav-next:after,
+body.is-touch-releasing[data-touch-side="left"] .page-nav-prev:after {
+  top: var(--touch-y, var(--cursor-y, 50%));
+  transform: translateY(-55%);
+  opacity: 0;
+}
+
+body.is-touch-device .page-nav {
+  pointer-events: none !important;
+}
+
+body.is-touch-device .page-nav:after {
+  opacity: 0;
+  transition:
+    opacity 220ms ease,
+    transform 120ms ease-out;
 }
 
 @media (max-width: 1024px) {
