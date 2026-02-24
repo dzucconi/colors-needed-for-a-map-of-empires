@@ -2,7 +2,6 @@ import "./styles.css";
 import rawColors from "../colors.txt?raw";
 
 type HistoryMode = "push" | "replace" | "none";
-type Direction = "next" | "prev";
 
 const DEFAULT_AMOUNT = 4;
 const COLORS_PARAM = "c";
@@ -26,6 +25,7 @@ if (allColors.length === 0) {
 const colorIndex = new Map(allColors.map((color, index) => [color, index]));
 let currentPalette: string[] = [];
 let historyDepth = 0;
+let urlHistory: string[] = [];
 const fallbackColor = allColors[0]!;
 
 const randomIndex = (size: number): number => Math.floor(Math.random() * size);
@@ -92,13 +92,27 @@ const paletteFromUrl = (): string[] | null => {
 const syncHistory = (mode: Exclude<HistoryMode, "none">, colors: string[]): void => {
   const url = paletteUrl(colors);
   if (mode === "push") {
-    historyDepth++;
+    urlHistory.push(url);
+    historyDepth = Math.max(0, urlHistory.length - 1);
     window.history.pushState(null, "", url);
     return;
   }
 
+  if (urlHistory.length === 0) {
+    urlHistory.push(url);
+  } else {
+    urlHistory[urlHistory.length - 1] = url;
+  }
+  historyDepth = Math.max(0, urlHistory.length - 1);
   window.history.replaceState(null, "", url);
 };
+
+const isPlainLeftClick = (event: MouseEvent): boolean =>
+  event.button === 0 &&
+  !event.metaKey &&
+  !event.ctrlKey &&
+  !event.shiftKey &&
+  !event.altKey;
 
 const setPalette = (colors: string[], history: HistoryMode): void => {
   currentPalette = colors;
@@ -109,39 +123,48 @@ const setPalette = (colors: string[], history: HistoryMode): void => {
 };
 
 const createColorLink = (color: string, index: number): HTMLAnchorElement => {
+  const next = currentPalette.map((value, i) => (i === index ? sampleColor() : value));
   const link = document.createElement("a");
   link.className = "color";
-  link.href = "#";
+  link.href = paletteUrl(next);
   link.textContent = color;
   link.addEventListener("click", (event) => {
+    if (!isPlainLeftClick(event)) {
+      return;
+    }
     event.preventDefault();
-    const next = currentPalette.map((value, i) => (i === index ? sampleColor() : value));
     setPalette(next, "push");
   });
   return link;
 };
 
-const createPageTurn = (direction: Direction): HTMLAnchorElement => {
-  const turn = document.createElement("a");
-  turn.className = `page-turn page-turn-${direction}`;
-  turn.href = direction === "prev" ? "#back" : "#next";
-  turn.setAttribute(
-    "aria-label",
-    direction === "prev" ? "Turn page back" : "Turn page forward"
-  );
-  turn.addEventListener("click", (event) => {
-    event.preventDefault();
+const nextNav = document.createElement("a");
+nextNav.className = "page-nav page-nav-next";
+nextNav.href = "?";
+nextNav.setAttribute("aria-label", "Next palette");
+nextNav.addEventListener("click", (event) => {
+  const next = samplePalette(currentPalette.length);
+  nextNav.href = paletteUrl(next);
+  if (!isPlainLeftClick(event)) {
+    return;
+  }
+  event.preventDefault();
+  setPalette(next, "push");
+});
 
-    if (direction === "prev") {
-      window.history.back();
-      return;
-    }
+const prevNav = document.createElement("a");
+prevNav.className = "page-nav page-nav-prev";
+prevNav.href = "#back";
+prevNav.setAttribute("aria-label", "Previous palette");
+prevNav.addEventListener("click", (event) => {
+  if (!isPlainLeftClick(event)) {
+    return;
+  }
+  event.preventDefault();
+  window.history.back();
+});
 
-    setPalette(samplePalette(currentPalette.length), "push");
-  });
-
-  return turn;
-};
+document.body.append(nextNav, prevNav);
 
 const render = (): void => {
   app.replaceChildren();
@@ -161,12 +184,12 @@ const render = (): void => {
   });
 
   fragment.append(document.createElement("hr"));
-
-  fragment.append(createPageTurn("next"));
-  if (historyDepth > 0) {
-    fragment.append(createPageTurn("prev"));
-  }
   app.append(fragment);
+
+  const previewNext = samplePalette(currentPalette.length);
+  nextNav.href = paletteUrl(previewNext);
+  prevNav.href = urlHistory[urlHistory.length - 2] ?? "#back";
+  prevNav.hidden = historyDepth === 0;
 };
 
 const initIdleTracker = (): void => {
@@ -190,6 +213,13 @@ const initIdleTracker = (): void => {
   window.addEventListener("mousemove", (event) => {
     wake();
     updateSide(event.clientX);
+    nextNav.style.pointerEvents = "none";
+    prevNav.style.pointerEvents = "none";
+    const beneath = document.elementFromPoint(event.clientX, event.clientY);
+    document.body.dataset["overLink"] = beneath?.closest(".app a") ? "true" : "false";
+    nextNav.style.pointerEvents = "";
+    prevNav.style.pointerEvents = "";
+    document.body.style.setProperty("--cursor-y", `${event.clientY}px`);
   });
   window.addEventListener("mousedown", wake);
   window.addEventListener("keydown", wake);
@@ -197,6 +227,7 @@ const initIdleTracker = (): void => {
   window.addEventListener("mouseleave", () => {
     document.body.classList.add("is-idle");
     delete document.body.dataset["side"];
+    delete document.body.dataset["overLink"];
   });
 
   wake();
@@ -204,9 +235,13 @@ const initIdleTracker = (): void => {
 
 const init = (): void => {
   initIdleTracker();
+  document.body.dataset["overLink"] = "false";
 
   window.addEventListener("popstate", () => {
-    historyDepth = Math.max(0, historyDepth - 1);
+    if (urlHistory.length > 1) {
+      urlHistory.pop();
+    }
+    historyDepth = Math.max(0, urlHistory.length - 1);
     const palette = paletteFromUrl();
     if (!palette || palette.length === 0) {
       return;
@@ -216,12 +251,15 @@ const init = (): void => {
 
   const palette = paletteFromUrl();
   if (palette && palette.length > 0) {
+    urlHistory = [paletteUrl(palette)];
     setPalette(palette, "replace");
     return;
   }
 
   const params = new URLSearchParams(window.location.search);
-  setPalette(samplePalette(parseAmount(params)), "replace");
+  const initial = samplePalette(parseAmount(params));
+  urlHistory = [paletteUrl(initial)];
+  setPalette(initial, "replace");
 };
 
 init();
