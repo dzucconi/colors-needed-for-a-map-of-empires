@@ -24,6 +24,7 @@ if (allColors.length === 0) {
 
 const colorIndex = new Map(allColors.map((color, index) => [color, index]));
 let currentPalette: string[] = [];
+let historyDepth = 0;
 const fallbackColor = allColors[0]!;
 
 const randomIndex = (size: number): number => Math.floor(Math.random() * size);
@@ -90,6 +91,7 @@ const paletteFromUrl = (): string[] | null => {
 const syncHistory = (mode: Exclude<HistoryMode, "none">, colors: string[]): void => {
   const url = paletteUrl(colors);
   if (mode === "push") {
+    historyDepth++;
     window.history.pushState(null, "", url);
     return;
   }
@@ -160,12 +162,15 @@ const render = (): void => {
   fragment.append(document.createElement("hr"));
 
   fragment.append(createPageTurn("next"));
-  fragment.append(createPageTurn("prev"));
+  if (historyDepth > 0) {
+    fragment.append(createPageTurn("prev"));
+  }
   app.append(fragment);
 };
 
 const init = (): void => {
   window.addEventListener("popstate", () => {
+    historyDepth = Math.max(0, historyDepth - 1);
     const palette = paletteFromUrl();
     if (!palette || palette.length === 0) {
       return;
