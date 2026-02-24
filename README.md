@@ -2,6 +2,8 @@
 
 [![Netlify Status](https://api.netlify.com/api/v1/badges/8fbd6a95-9c52-445e-a122-46652ed2efcb/deploy-status)](https://app.netlify.com/projects/damonzucconi-colors-needed/deploys)
 
+Every map is colorable with four colors.
+
 ## Meta
 
 - **State**: production
