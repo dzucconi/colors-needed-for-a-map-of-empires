@@ -6,6 +6,7 @@ type HistoryMode = "push" | "replace" | "none";
 const DEFAULT_AMOUNT = 4;
 const COLORS_PARAM = "c";
 const IDLE_TIMEOUT_MS = 2000;
+const TEXT_FADE_MS = 160;
 
 const app = document.getElementById("app");
 
@@ -27,6 +28,10 @@ let currentPalette: string[] = [];
 let historyDepth = 0;
 let urlHistory: string[] = [];
 const fallbackColor = allColors[0]!;
+let nextNavTarget: string[] = [];
+const nextColorTargets: string[][] = [];
+let permalinkEl: HTMLAnchorElement | null = null;
+let colorEls: HTMLAnchorElement[] = [];
 
 const randomIndex = (size: number): number => Math.floor(Math.random() * size);
 const sampleColor = (): string => allColors[randomIndex(allColors.length)] ?? fallbackColor;
@@ -114,25 +119,55 @@ const isPlainLeftClick = (event: MouseEvent): boolean =>
   !event.shiftKey &&
   !event.altKey;
 
-const setPalette = (colors: string[], history: HistoryMode): void => {
-  currentPalette = colors;
-  if (history !== "none") {
-    syncHistory(history, colors);
+const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+const updateTextWithFade = (
+  element: HTMLElement,
+  nextText: string,
+  animate: boolean
+): void => {
+  if (element.textContent === nextText) {
+    return;
   }
-  render();
+
+  if (!animate || prefersReducedMotion.matches) {
+    element.textContent = nextText;
+    return;
+  }
+
+  element.getAnimations().forEach((animation) => {
+    animation.cancel();
+  });
+
+  const fadeOut = element.animate([{ opacity: 1 }, { opacity: 0 }], {
+    duration: TEXT_FADE_MS / 2,
+    easing: "ease",
+    fill: "forwards",
+  });
+  fadeOut.onfinish = () => {
+    element.textContent = nextText;
+    element.animate([{ opacity: 0 }, { opacity: 1 }], {
+      duration: TEXT_FADE_MS,
+      easing: "ease-out",
+      fill: "forwards",
+    });
+  };
 };
 
-const createColorLink = (color: string, index: number): HTMLAnchorElement => {
-  const next = currentPalette.map((value, i) => (i === index ? sampleColor() : value));
+const createColorLink = (index: number): HTMLAnchorElement => {
   const link = document.createElement("a");
   link.className = "color";
-  link.href = paletteUrl(next);
-  link.textContent = color;
+  link.href = "#";
+  link.textContent = "";
   link.addEventListener("click", (event) => {
     if (!isPlainLeftClick(event)) {
       return;
     }
     event.preventDefault();
+    const next = nextColorTargets[index];
+    if (!next) {
+      return;
+    }
     setPalette(next, "push");
   });
   return link;
@@ -143,8 +178,7 @@ nextNav.className = "page-nav page-nav-next";
 nextNav.href = "?";
 nextNav.setAttribute("aria-label", "Next palette");
 nextNav.addEventListener("click", (event) => {
-  const next = samplePalette(currentPalette.length);
-  nextNav.href = paletteUrl(next);
+  const next = nextNavTarget;
   if (!isPlainLeftClick(event)) {
     return;
   }
@@ -166,30 +200,77 @@ prevNav.addEventListener("click", (event) => {
 
 document.body.append(nextNav, prevNav);
 
-const render = (): void => {
+const ensureLayout = (): void => {
+  if (permalinkEl && colorEls.length === currentPalette.length) {
+    return;
+  }
+
   app.replaceChildren();
   const fragment = document.createDocumentFragment();
 
-  const permalink = document.createElement("a");
-  permalink.className = "permalink";
-  permalink.target = "_blank";
-  permalink.href = paletteUrl(currentPalette);
-  permalink.textContent = represent(currentPalette);
+  permalinkEl = document.createElement("a");
+  permalinkEl.className = "permalink";
+  permalinkEl.target = "_blank";
 
-  fragment.append(permalink);
+  fragment.append(permalinkEl);
   fragment.append(document.createElement("hr"));
 
-  currentPalette.forEach((color, index) => {
-    fragment.append(createColorLink(color, index));
+  colorEls = Array.from({ length: currentPalette.length }, (_, index) =>
+    createColorLink(index)
+  );
+  colorEls.forEach((link) => {
+    fragment.append(link);
   });
 
   fragment.append(document.createElement("hr"));
   app.append(fragment);
+};
 
-  const previewNext = samplePalette(currentPalette.length);
-  nextNav.href = paletteUrl(previewNext);
+const render = (previousPalette: string[] | null, animate: boolean): void => {
+  ensureLayout();
+
+  const fullAnimate = animate && !!previousPalette;
+  const permalinkText = represent(currentPalette);
+
+  if (permalinkEl) {
+    permalinkEl.href = paletteUrl(currentPalette);
+    updateTextWithFade(permalinkEl, permalinkText, fullAnimate);
+  }
+
+  colorEls.forEach((link, index) => {
+    const color = currentPalette[index];
+    if (!color) {
+      return;
+    }
+
+    const next = currentPalette.map((value, i) => (i === index ? sampleColor() : value));
+    nextColorTargets[index] = next;
+    link.href = paletteUrl(next);
+
+    const changed = previousPalette ? previousPalette[index] !== color : false;
+    updateTextWithFade(link, color, fullAnimate && changed);
+  });
+
+  nextNavTarget = samplePalette(currentPalette.length);
+  nextNav.href = paletteUrl(nextNavTarget);
   prevNav.href = urlHistory[urlHistory.length - 2] ?? "#back";
   prevNav.hidden = historyDepth === 0;
+};
+
+const setPalette = (
+  colors: string[],
+  history: HistoryMode,
+  options?: { animate?: boolean }
+): void => {
+  const animate = options?.animate ?? true;
+  const previousPalette = currentPalette.length > 0 ? [...currentPalette] : null;
+
+  currentPalette = colors;
+  if (history !== "none") {
+    syncHistory(history, colors);
+  }
+
+  render(previousPalette, animate);
 };
 
 const initIdleTracker = (): void => {
@@ -252,14 +333,14 @@ const init = (): void => {
   const palette = paletteFromUrl();
   if (palette && palette.length > 0) {
     urlHistory = [paletteUrl(palette)];
-    setPalette(palette, "replace");
+    setPalette(palette, "replace", { animate: false });
     return;
   }
 
   const params = new URLSearchParams(window.location.search);
   const initial = samplePalette(parseAmount(params));
   urlHistory = [paletteUrl(initial)];
-  setPalette(initial, "replace");
+  setPalette(initial, "replace", { animate: false });
 };
 
 init();

@@ -56,9 +56,6 @@ a {
 a:hover {
   color: blue;
 }
-a:focus {
-  color: white;
-}
 
 body.is-idle {
   cursor: none;
@@ -84,7 +81,13 @@ body.is-idle {
   transform: translateY(-55%);
   font-size: 2.25rem;
   line-height: 1;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial,
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    Helvetica,
+    Arial,
     sans-serif;
   letter-spacing: 0;
   text-indent: 0;
@@ -114,7 +117,8 @@ body[data-side="right"]:not(.is-idle)[data-over-link="false"] .page-nav-next {
   pointer-events: auto;
 }
 
-body[data-side="right"]:not(.is-idle)[data-over-link="false"] .page-nav-next:after {
+body[data-side="right"]:not(.is-idle)[data-over-link="false"]
+  .page-nav-next:after {
   opacity: 0.45;
 }
 
@@ -122,7 +126,8 @@ body[data-side="left"]:not(.is-idle)[data-over-link="false"] .page-nav-prev {
   pointer-events: auto;
 }
 
-body[data-side="left"]:not(.is-idle)[data-over-link="false"] .page-nav-prev:after {
+body[data-side="left"]:not(.is-idle)[data-over-link="false"]
+  .page-nav-prev:after {
   opacity: 0.45;
 }
 
