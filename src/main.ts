@@ -6,6 +6,7 @@ type Direction = "next" | "prev";
 
 const DEFAULT_AMOUNT = 4;
 const COLORS_PARAM = "c";
+const IDLE_TIMEOUT_MS = 2000;
 
 const app = document.getElementById("app");
 
@@ -168,7 +169,42 @@ const render = (): void => {
   app.append(fragment);
 };
 
+const initIdleTracker = (): void => {
+  let idleTimer: number | null = null;
+
+  const wake = (): void => {
+    document.body.classList.remove("is-idle");
+    if (idleTimer !== null) {
+      window.clearTimeout(idleTimer);
+    }
+    idleTimer = window.setTimeout(() => {
+      document.body.classList.add("is-idle");
+    }, IDLE_TIMEOUT_MS);
+  };
+
+  const updateSide = (x: number): void => {
+    const half = window.innerWidth / 2;
+    document.body.dataset["side"] = x < half ? "left" : "right";
+  };
+
+  window.addEventListener("mousemove", (event) => {
+    wake();
+    updateSide(event.clientX);
+  });
+  window.addEventListener("mousedown", wake);
+  window.addEventListener("keydown", wake);
+  window.addEventListener("touchstart", wake);
+  window.addEventListener("mouseleave", () => {
+    document.body.classList.add("is-idle");
+    delete document.body.dataset["side"];
+  });
+
+  wake();
+};
+
 const init = (): void => {
+  initIdleTracker();
+
   window.addEventListener("popstate", () => {
     historyDepth = Math.max(0, historyDepth - 1);
     const palette = paletteFromUrl();

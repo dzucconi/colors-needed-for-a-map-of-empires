@@ -56,14 +56,19 @@ a:focus {
   color: white;
 }
 
+body.is-idle {
+  cursor: none;
+}
+
 .page-turn {
   position: fixed;
   top: 0;
   bottom: 0;
   width: 3.5em;
   z-index: 20;
-  opacity: 0.45;
-  transition: opacity 120ms ease;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
 }
 .page-turn:hover,
 .page-turn:focus {
@@ -96,6 +101,16 @@ a:focus {
 .page-turn-prev:after {
   content: "\2190";
   left: 0.35em;
+}
+
+body[data-side="right"]:not(.is-idle) .page-turn-next {
+  opacity: 0.45;
+  pointer-events: auto;
+}
+
+body[data-side="left"]:not(.is-idle) .page-turn-prev {
+  opacity: 0.45;
+  pointer-events: auto;
 }
 
 @media (max-width: 1024px) {
