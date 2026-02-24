@@ -2874,8 +2874,6 @@ dodgerblue
 doe
 doe-skin brown
 doeskin
-doge
-doge purple
 dogwood
 dolly
 dolly pink
