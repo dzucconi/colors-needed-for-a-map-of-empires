@@ -7,7 +7,7 @@
 - **State**: production
 - **Production**:
   - **URL**: https://colors-needed.work.damonzucconi.com
-  - **URL**: https://damonzucconi-colors-needed.netlify.app (fallback mode: `blue`)
+  - **URL**: https://damonzucconi-colors-needed.netlify.app
 - **Host**: https://app.netlify.com/projects/damonzucconi-colors-needed/overview
 - **Deploys**: pushes to your default branch auto-deploy to production. [Manually trigger a deploy](https://app.netlify.com/projects/damonzucconi-colors-needed/deploys)
 
