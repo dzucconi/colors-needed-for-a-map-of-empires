@@ -1,5 +1,8 @@
 import "./styles.css";
 import rawColors from "../colors.txt?raw";
+import { createTextFader } from "./lib/animation";
+import { initIdleTracker, initKeyboardNav, isPlainLeftClick } from "./lib/interaction";
+import { createPaletteToolkit } from "./lib/palette";
 
 type HistoryMode = "push" | "replace" | "none";
 
@@ -9,7 +12,6 @@ const IDLE_TIMEOUT_MS = 2000;
 const TEXT_FADE_MS = 160;
 
 const app = document.getElementById("app");
-
 if (!(app instanceof HTMLDivElement)) {
   throw new Error("Expected #app to be a div element.");
 }
@@ -17,141 +19,76 @@ if (!(app instanceof HTMLDivElement)) {
 const allColors = rawColors
   .split(/\r?\n/u)
   .map((line) => line.trim())
-  .filter((line) => line.length > 0);
+  .filter(Boolean);
 
-if (allColors.length === 0) {
-  throw new Error("No colors available.");
-}
+const {
+  sampleColor,
+  samplePalette,
+  parseAmount,
+  represent,
+  paletteUrl,
+  paletteFromLocation,
+} = createPaletteToolkit(allColors, {
+  defaultAmount: DEFAULT_AMOUNT,
+  colorParam: COLORS_PARAM,
+});
 
-const colorIndex = new Map(allColors.map((color, index) => [color, index]));
-let currentPalette: string[] = [];
-let historyDepth = 0;
-let urlHistory: string[] = [];
-const fallbackColor = allColors[0]!;
-let nextNavTarget: string[] = [];
-const nextColorTargets: string[][] = [];
-let permalinkEl: HTMLAnchorElement | null = null;
-let colorEls: HTMLAnchorElement[] = [];
+const fadeText = createTextFader(TEXT_FADE_MS);
 
-const randomIndex = (size: number): number => Math.floor(Math.random() * size);
-const sampleColor = (): string => allColors[randomIndex(allColors.length)] ?? fallbackColor;
-const samplePalette = (amount: number): string[] =>
-  Array.from({ length: amount }, sampleColor);
-
-const parseAmount = (params: URLSearchParams): number => {
-  const raw = params.get("amount");
-  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_AMOUNT;
+const state = {
+  palette: [] as string[],
+  urls: [] as string[],
+  nextTarget: [] as string[],
+  colorTargets: [] as string[][],
+  permalink: null as HTMLAnchorElement | null,
+  colorLinks: [] as HTMLAnchorElement[],
 };
 
-const represent = (colors: string[]): string => {
-  const initials = colors.map((color) =>
-    color
-      .split(/\s+/u)
-      .filter((word) => word.length > 0)
-      .map((word) => word[0] ?? "")
-      .join("")
-  );
-  const totalChars = colors.reduce((count, color) => count + color.length, 0);
-  return [totalChars, ...initials].join("-");
-};
+const historyDepth = (): number => Math.max(0, state.urls.length - 1);
 
-const encodePalette = (colors: string[]): string =>
-  colors
-    .map((color) => {
-      const index = colorIndex.get(color);
-      return typeof index === "number" ? index.toString(36) : "";
-    })
-    .join(".");
+const nextNav = document.createElement("a");
+nextNav.className = "page-nav page-nav-next";
+nextNav.href = "?";
+nextNav.setAttribute("aria-label", "Next palette");
 
-const decodePalette = (encoded: string): string[] | null => {
-  if (encoded.length === 0) {
-    return null;
-  }
+const prevNav = document.createElement("a");
+prevNav.className = "page-nav page-nav-prev";
+prevNav.href = "#back";
+prevNav.setAttribute("aria-label", "Previous palette");
 
-  const decoded = encoded.split(".").map((part) => {
-    const index = Number.parseInt(part, 36);
-    return Number.isFinite(index) && index >= 0 ? allColors[index] : undefined;
-  });
+document.body.append(nextNav, prevNav);
 
-  if (decoded.some((color) => !color)) {
-    return null;
-  }
+const syncHistory = (mode: Exclude<HistoryMode, "none">, palette: string[]): void => {
+  const url = paletteUrl(palette);
 
-  return decoded as string[];
-};
-
-const paletteUrl = (colors: string[]): string => {
-  const params = new URLSearchParams();
-  params.set(COLORS_PARAM, encodePalette(colors));
-  return `?${params.toString()}`;
-};
-
-const paletteFromUrl = (): string[] | null => {
-  const params = new URLSearchParams(window.location.search);
-  const encoded = params.get(COLORS_PARAM) ?? "";
-  const palette = decodePalette(encoded);
-  return palette && palette.length > 0 ? palette : null;
-};
-
-const syncHistory = (mode: Exclude<HistoryMode, "none">, colors: string[]): void => {
-  const url = paletteUrl(colors);
   if (mode === "push") {
-    urlHistory.push(url);
-    historyDepth = Math.max(0, urlHistory.length - 1);
+    state.urls.push(url);
     window.history.pushState(null, "", url);
     return;
   }
 
-  if (urlHistory.length === 0) {
-    urlHistory.push(url);
+  if (state.urls.length === 0) {
+    state.urls.push(url);
   } else {
-    urlHistory[urlHistory.length - 1] = url;
+    state.urls[state.urls.length - 1] = url;
   }
-  historyDepth = Math.max(0, urlHistory.length - 1);
   window.history.replaceState(null, "", url);
 };
 
-const isPlainLeftClick = (event: MouseEvent): boolean =>
-  event.button === 0 &&
-  !event.metaKey &&
-  !event.ctrlKey &&
-  !event.shiftKey &&
-  !event.altKey;
-
-const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
-
-const updateTextWithFade = (
-  element: HTMLElement,
-  nextText: string,
-  animate: boolean
+const setPalette = (
+  palette: string[],
+  historyMode: HistoryMode,
+  options?: { animate?: boolean }
 ): void => {
-  if (element.textContent === nextText) {
-    return;
+  const previousPalette = state.palette.length > 0 ? [...state.palette] : null;
+  const animate = options?.animate ?? true;
+
+  state.palette = palette;
+  if (historyMode !== "none") {
+    syncHistory(historyMode, palette);
   }
 
-  if (!animate || prefersReducedMotion.matches) {
-    element.textContent = nextText;
-    return;
-  }
-
-  element.getAnimations().forEach((animation) => {
-    animation.cancel();
-  });
-
-  const fadeOut = element.animate([{ opacity: 1 }, { opacity: 0 }], {
-    duration: TEXT_FADE_MS / 2,
-    easing: "ease",
-    fill: "forwards",
-  });
-  fadeOut.onfinish = () => {
-    element.textContent = nextText;
-    element.animate([{ opacity: 0 }, { opacity: 1 }], {
-      duration: TEXT_FADE_MS,
-      easing: "ease-out",
-      fill: "forwards",
-    });
-  };
+  render(previousPalette, animate);
 };
 
 const createColorLink = (index: number): HTMLAnchorElement => {
@@ -164,32 +101,74 @@ const createColorLink = (index: number): HTMLAnchorElement => {
       return;
     }
     event.preventDefault();
-    const next = nextColorTargets[index];
-    if (!next) {
-      return;
+    const next = state.colorTargets[index];
+    if (next) {
+      setPalette(next, "push");
     }
-    setPalette(next, "push");
   });
   return link;
 };
 
-const nextNav = document.createElement("a");
-nextNav.className = "page-nav page-nav-next";
-nextNav.href = "?";
-nextNav.setAttribute("aria-label", "Next palette");
+const ensureLayout = (): void => {
+  if (state.permalink && state.colorLinks.length === state.palette.length) {
+    return;
+  }
+
+  app.replaceChildren();
+  const fragment = document.createDocumentFragment();
+
+  state.permalink = document.createElement("a");
+  state.permalink.className = "permalink";
+  state.permalink.target = "_blank";
+
+  fragment.append(state.permalink, document.createElement("hr"));
+
+  state.colorLinks = Array.from({ length: state.palette.length }, (_, index) =>
+    createColorLink(index)
+  );
+  state.colorLinks.forEach((link) => fragment.append(link));
+
+  fragment.append(document.createElement("hr"));
+  app.append(fragment);
+};
+
+const render = (previousPalette: string[] | null, animate: boolean): void => {
+  ensureLayout();
+  const canAnimate = animate && !!previousPalette;
+
+  if (state.permalink) {
+    state.permalink.href = paletteUrl(state.palette);
+    fadeText(state.permalink, represent(state.palette), canAnimate);
+  }
+
+  state.colorLinks.forEach((link, index) => {
+    const color = state.palette[index];
+    if (!color) {
+      return;
+    }
+
+    const target = state.palette.map((value, i) => (i === index ? sampleColor() : value));
+    state.colorTargets[index] = target;
+    link.href = paletteUrl(target);
+
+    const changed = previousPalette ? previousPalette[index] !== color : false;
+    fadeText(link, color, canAnimate && changed);
+  });
+
+  state.nextTarget = samplePalette(state.palette.length);
+  nextNav.href = paletteUrl(state.nextTarget);
+  prevNav.href = state.urls[state.urls.length - 2] ?? "#back";
+  prevNav.hidden = historyDepth() === 0;
+};
+
 nextNav.addEventListener("click", (event) => {
-  const next = nextNavTarget;
   if (!isPlainLeftClick(event)) {
     return;
   }
   event.preventDefault();
-  setPalette(next, "push");
+  setPalette(state.nextTarget, "push");
 });
 
-const prevNav = document.createElement("a");
-prevNav.className = "page-nav page-nav-prev";
-prevNav.href = "#back";
-prevNav.setAttribute("aria-label", "Previous palette");
 prevNav.addEventListener("click", (event) => {
   if (!isPlainLeftClick(event)) {
     return;
@@ -198,148 +177,35 @@ prevNav.addEventListener("click", (event) => {
   window.history.back();
 });
 
-document.body.append(nextNav, prevNav);
-
-const ensureLayout = (): void => {
-  if (permalinkEl && colorEls.length === currentPalette.length) {
-    return;
-  }
-
-  app.replaceChildren();
-  const fragment = document.createDocumentFragment();
-
-  permalinkEl = document.createElement("a");
-  permalinkEl.className = "permalink";
-  permalinkEl.target = "_blank";
-
-  fragment.append(permalinkEl);
-  fragment.append(document.createElement("hr"));
-
-  colorEls = Array.from({ length: currentPalette.length }, (_, index) =>
-    createColorLink(index)
-  );
-  colorEls.forEach((link) => {
-    fragment.append(link);
-  });
-
-  fragment.append(document.createElement("hr"));
-  app.append(fragment);
-};
-
-const render = (previousPalette: string[] | null, animate: boolean): void => {
-  ensureLayout();
-
-  const fullAnimate = animate && !!previousPalette;
-  const permalinkText = represent(currentPalette);
-
-  if (permalinkEl) {
-    permalinkEl.href = paletteUrl(currentPalette);
-    updateTextWithFade(permalinkEl, permalinkText, fullAnimate);
-  }
-
-  colorEls.forEach((link, index) => {
-    const color = currentPalette[index];
-    if (!color) {
-      return;
-    }
-
-    const next = currentPalette.map((value, i) => (i === index ? sampleColor() : value));
-    nextColorTargets[index] = next;
-    link.href = paletteUrl(next);
-
-    const changed = previousPalette ? previousPalette[index] !== color : false;
-    updateTextWithFade(link, color, fullAnimate && changed);
-  });
-
-  nextNavTarget = samplePalette(currentPalette.length);
-  nextNav.href = paletteUrl(nextNavTarget);
-  prevNav.href = urlHistory[urlHistory.length - 2] ?? "#back";
-  prevNav.hidden = historyDepth === 0;
-};
-
-const setPalette = (
-  colors: string[],
-  history: HistoryMode,
-  options?: { animate?: boolean }
-): void => {
-  const animate = options?.animate ?? true;
-  const previousPalette = currentPalette.length > 0 ? [...currentPalette] : null;
-
-  currentPalette = colors;
-  if (history !== "none") {
-    syncHistory(history, colors);
-  }
-
-  render(previousPalette, animate);
-};
-
-const initIdleTracker = (): void => {
-  let idleTimer: number | null = null;
-
-  const wake = (): void => {
-    document.body.classList.remove("is-idle");
-    if (idleTimer !== null) {
-      window.clearTimeout(idleTimer);
-    }
-    idleTimer = window.setTimeout(() => {
-      document.body.classList.add("is-idle");
-    }, IDLE_TIMEOUT_MS);
-  };
-
-  const updateSide = (x: number): void => {
-    const half = window.innerWidth / 2;
-    document.body.dataset["side"] = x < half ? "left" : "right";
-  };
-
-  window.addEventListener("mousemove", (event) => {
-    wake();
-    updateSide(event.clientX);
-    nextNav.style.pointerEvents = "none";
-    prevNav.style.pointerEvents = "none";
-    const beneath = document.elementFromPoint(event.clientX, event.clientY);
-    document.body.dataset["overLink"] = beneath?.closest(".app a") ? "true" : "false";
-    nextNav.style.pointerEvents = "";
-    prevNav.style.pointerEvents = "";
-    document.body.style.setProperty("--cursor-y", `${event.clientY}px`);
-  });
-  window.addEventListener("mousedown", wake);
-  window.addEventListener("keydown", wake);
-  window.addEventListener("touchstart", wake);
-  window.addEventListener("mouseleave", () => {
-    document.body.classList.add("is-idle");
-    delete document.body.dataset["side"];
-    delete document.body.dataset["overLink"];
-  });
-
-  wake();
-};
-
 const init = (): void => {
-  initIdleTracker();
+  initIdleTracker({
+    nextNav,
+    prevNav,
+    idleTimeoutMs: IDLE_TIMEOUT_MS,
+  });
   document.body.dataset["overLink"] = "false";
 
-  window.addEventListener("popstate", () => {
-    if (urlHistory.length > 1) {
-      urlHistory.pop();
-    }
-    historyDepth = Math.max(0, urlHistory.length - 1);
-    const palette = paletteFromUrl();
-    if (!palette || palette.length === 0) {
-      return;
-    }
-    setPalette(palette, "none");
+  initKeyboardNav({
+    canGoBack: () => historyDepth() > 0,
+    goBack: () => window.history.back(),
+    goNext: () => setPalette(state.nextTarget, "push"),
   });
 
-  const palette = paletteFromUrl();
-  if (palette && palette.length > 0) {
-    urlHistory = [paletteUrl(palette)];
-    setPalette(palette, "replace", { animate: false });
-    return;
-  }
+  window.addEventListener("popstate", () => {
+    if (state.urls.length > 1) {
+      state.urls.pop();
+    }
+    const palette = paletteFromLocation();
+    if (palette) {
+      setPalette(palette, "none");
+    }
+  });
 
-  const params = new URLSearchParams(window.location.search);
-  const initial = samplePalette(parseAmount(params));
-  urlHistory = [paletteUrl(initial)];
+  const initial =
+    paletteFromLocation() ??
+    samplePalette(parseAmount(new URLSearchParams(window.location.search)));
+
+  state.urls = [paletteUrl(initial)];
   setPalette(initial, "replace", { animate: false });
 };
 
