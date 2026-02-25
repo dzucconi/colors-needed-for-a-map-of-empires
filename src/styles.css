@@ -55,6 +55,7 @@ a {
 }
 
 .app a {
+  min-width: 50%;
   width: max-content;
   -webkit-tap-highlight-color: transparent;
 }
