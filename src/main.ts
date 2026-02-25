@@ -14,6 +14,7 @@ const DEFAULT_AMOUNT = 4;
 const COLORS_PARAM = "c";
 const IDLE_TIMEOUT_MS = 2000;
 const TEXT_FADE_MS = 160;
+const isCoarsePointer = window.matchMedia("(hover: none) and (pointer: coarse)").matches;
 
 const app = document.getElementById("app");
 if (!(app instanceof HTMLDivElement)) {
@@ -145,7 +146,7 @@ const ensureLayout = (): void => {
 
 const render = (previousPalette: string[] | null, animate: boolean): void => {
   ensureLayout();
-  const canAnimate = animate && !!previousPalette;
+  const canAnimate = animate && !!previousPalette && !isCoarsePointer;
 
   if (state.permalink) {
     state.permalink.href = paletteUrl(state.palette);

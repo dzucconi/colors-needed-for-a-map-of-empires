@@ -213,14 +213,13 @@ const initTouchSurface = (options: {
         return;
       }
 
-      document.body.classList.add("is-touching");
       startX = touch.clientX;
       startY = touch.clientY;
       lastX = startX;
       lastY = startY;
       active = false;
-      side = startX < window.innerWidth / 2 && canGoBack() ? "left" : "right";
-      document.body.dataset["touchSide"] = side;
+      side = null;
+      delete document.body.dataset["touchSide"];
       document.body.style.setProperty("--touch-y", `${startY}px`);
       document.body.style.setProperty("--touch-pull", "0");
     },
@@ -251,6 +250,7 @@ const initTouchSurface = (options: {
           return;
         }
         active = true;
+        document.body.classList.add("is-touching");
       }
 
       if (!active) {
