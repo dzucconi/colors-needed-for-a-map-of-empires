@@ -53,6 +53,10 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+.app a {
+  width: max-content;
+}
 @media (hover: hover) and (pointer: fine) {
   a:hover {
     color: blue;
