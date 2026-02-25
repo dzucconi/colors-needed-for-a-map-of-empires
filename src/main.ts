@@ -48,6 +48,12 @@ const state = {
   colorLinks: [] as HTMLAnchorElement[],
 };
 
+const blurTarget = (target: EventTarget | null): void => {
+  if (target instanceof HTMLElement) {
+    target.blur();
+  }
+};
+
 const historyDepth = (): number => Math.max(0, state.urls.length - 1);
 
 const nextNav = document.createElement("a");
@@ -109,6 +115,7 @@ const createColorLink = (index: number): HTMLAnchorElement => {
     if (next) {
       setPalette(next, "push");
     }
+    blurTarget(event.currentTarget);
   });
   return link;
 };
@@ -171,6 +178,7 @@ nextNav.addEventListener("click", (event) => {
   }
   event.preventDefault();
   setPalette(state.nextTarget, "push");
+  blurTarget(event.currentTarget);
 });
 
 prevNav.addEventListener("click", (event) => {
@@ -179,6 +187,7 @@ prevNav.addEventListener("click", (event) => {
   }
   event.preventDefault();
   window.history.back();
+  blurTarget(event.currentTarget);
 });
 
 const init = (): void => {

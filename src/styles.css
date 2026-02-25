@@ -56,6 +56,14 @@ a {
 
 .app a {
   width: max-content;
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .app a:focus {
+    color: black;
+    outline: none;
+  }
 }
 @media (hover: hover) and (pointer: fine) {
   a:hover {
