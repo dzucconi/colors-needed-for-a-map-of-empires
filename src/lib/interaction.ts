@@ -165,26 +165,43 @@ const initTouchSurface = (options: {
   let lastY = 0;
   let active = false;
   let side: "left" | "right" | null = null;
+  let releaseTimer: number | null = null;
 
   document.body.classList.add("is-touch-device");
 
-  const reset = (): void => {
+  const clearReleaseVisual = (): void => {
+    if (releaseTimer !== null) {
+      window.clearTimeout(releaseTimer);
+      releaseTimer = null;
+    }
+    document.body.classList.remove("is-touch-releasing");
+  };
+
+  const reset = (options?: { keepTouchSide?: boolean }): void => {
     active = false;
     side = null;
     document.body.classList.remove("is-touching");
+    document.body.style.setProperty("--touch-pull", "0");
+    if (!options?.keepTouchSide) {
+      delete document.body.dataset["touchSide"];
+    }
   };
 
   const clearTouchVisual = (): void => {
+    clearReleaseVisual();
     document.body.classList.add("is-touch-releasing");
-    window.setTimeout(() => {
+    releaseTimer = window.setTimeout(() => {
       document.body.classList.remove("is-touch-releasing");
       delete document.body.dataset["touchSide"];
+      releaseTimer = null;
     }, releaseMs);
   };
 
   window.addEventListener(
     "touchstart",
     (event) => {
+      clearReleaseVisual();
+
       if (event.touches.length !== 1) {
         reset();
         return;
@@ -206,7 +223,6 @@ const initTouchSurface = (options: {
       document.body.dataset["touchSide"] = side;
       document.body.style.setProperty("--touch-y", `${startY}px`);
       document.body.style.setProperty("--touch-pull", "0");
-      document.body.classList.remove("is-touch-releasing");
     },
     { passive: true }
   );
@@ -278,7 +294,7 @@ const initTouchSurface = (options: {
     }
 
     clearTouchVisual();
-    reset();
+    reset({ keepTouchSide: true });
   };
 
   window.addEventListener("touchend", onTouchEnd, { passive: true });

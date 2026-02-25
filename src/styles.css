@@ -53,8 +53,10 @@ a {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
-a:hover {
-  color: blue;
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    color: blue;
+  }
 }
 
 body.is-idle {
